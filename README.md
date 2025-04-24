@@ -5,13 +5,9 @@ Atualmente funciona por prompt, e realiza o merge entre vídeo e áudio separada
 
 ## Funcionalidades
 
-Baixa vídeo em alta qualidade (sem áudio)
+Baixa vídeo na melhor qualidade do youtube
 
-Baixa áudio separado
-
-Faz merge automático entre vídeo e áudio com ffmpeg
-
-Salva os arquivos em uma pasta dedicada (Solar no seu diretório de usuário)
+Baixa o áudio de qualquer vídeo do youtube
 
 ## Tecnologias utilizadas
 

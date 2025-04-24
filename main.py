@@ -12,7 +12,8 @@ def configurar_pasta_downloads():
 def baixar_video(url):
     #Baixa o melhor vídeo sem áudio e retorna o título
     pasta_destino = configurar_pasta_downloads() #Puxa o diretório da pasta
-    video_arquivo = os.path.join(pasta_destino, "video.mp4")
+    titulo_video = puxar_titulo_video(url)
+    video_arquivo = os.path.join(pasta_destino, f"{titulo_video}.mp4")
     ydl_opts = { #Opções do yt_dlp
         'format': 'bestvideo',
         'outtmpl': video_arquivo,
@@ -26,8 +27,7 @@ def baixar_video(url):
     print("\nBaixando melhor video disponivel...") #Mensagem de video baixando
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True) #Pega infos do vídeo
-            titulo_video = info.get('title', 'sem_titulo') #Pega o título
+            ydl.download([url])
         print(f"\nVídeo baixado com sucesso! Salvo em: {video_arquivo}")
         return titulo_video
     except Exception as e:
@@ -36,7 +36,8 @@ def baixar_video(url):
 
 def baixar_audio(url):
     pasta_destino = configurar_pasta_downloads()
-    audio_arquivo = os.path.join(pasta_destino, "audio")
+    titulo_audio = puxar_titulo_video(url)
+    audio_arquivo = os.path.join(pasta_destino, f"{titulo_audio}.%(ext)s")
 
     ydl_opts = { #Opções do yt_dlp
         'format': 'bestaudio',
@@ -67,8 +68,8 @@ def baixar_audio(url):
 
 def merge(titulo_video): #Mescla vídeo e áudio e renomeia o título.
     pasta_destino = configurar_pasta_downloads()
-    video_file = os.path.join(pasta_destino, "video.mp4")
-    audio_file = os.path.join(pasta_destino, "audio.mp3")
+    video_file = os.path.join(pasta_destino, f"{titulo_video}.mp4")
+    audio_file = os.path.join(pasta_destino, f"{titulo_video}.mp3")
     merged_file = os.path.join(pasta_destino, "merged_output.mp4") 
 
     if not os.path.exists(video_file):
@@ -89,10 +90,17 @@ def merge(titulo_video): #Mescla vídeo e áudio e renomeia o título.
             merged_file
         ]
         subprocess.run(command, check=True)
-        
-        # Renomeia o arquivo para o título do vídeo
+
+        # Renomeia o arquivo para o título do vídeo, evitando sobrescrever
         titulo_final = limpar_nome_arquivo(titulo_video)
-        caminho_final = os.path.join(pasta_destino, f"{titulo_final}.mp4")
+        base, ext = os.path.splitext(titulo_final)
+        caminho_final = os.path.join(pasta_destino, f"{base}.mp4")
+
+        contador = 1
+        while os.path.exists(caminho_final):
+            caminho_final = os.path.join(pasta_destino, f"{base}_{contador}.mp4")
+            contador += 1
+
         os.rename(merged_file, caminho_final)
 
         print(f"\n✅ Merge completo! Arquivo renomeado como: {caminho_final}")
@@ -105,34 +113,47 @@ def merge(titulo_video): #Mescla vídeo e áudio e renomeia o título.
     except FileNotFoundError:
         print("\n❌ Certifique-se de que o FFmpeg está instalado e no PATH do sistema.")
 
-    return
+
+def puxar_titulo_video(url):
+    try:
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            titulo = info.get('title', 'sem_titulo')
+            return limpar_nome_arquivo(titulo)
+    except Exception as e:
+        print(f"Erro ao obter título do vídeo: {e}")
+        return 'sem_titulo'
 
 def menu_principal():
     while True:
         print("\n" + "=" * 50)
         print("🎬 YOUTUBE DOWNLOADER teste")
         print("=" * 50)
-        print("1. Baixar vídeo")
-        print("2. Playlist")
-        print("3. Áudio")
+        print("1. Baixar Vídeo")
+        print("2. Áudio")
+        print("3. Playlist")
         print("4. Sair")
 
         try:
             opcao = int(input('Sua escolha: '))
-            if opcao ==1:
+            if opcao in [1,2]: #Se opção é baixar vídeo ou áudio
                 url = input("\nCole a URL do Vídeo: ").strip()
-                titulo_video = baixar_video(url)
-                baixar_audio(url)
-                merge(titulo_video)
+                if opcao == 1: #Se opção = Baixar vídeo
+                    titulo_video = baixar_video(url) #Baixar o vídeo
+                    baixar_audio(url) #Baixar o áudio
+                    merge(titulo_video) #Merge nos arquivos de vídeo e áudio
+                    if titulo_video: #Se existir título do vídeo:
+                        print(f"\nTítulo do vídeo: {titulo_video}")
 
-                if titulo_video:
-                    print(f"\nTítulo do vídeo: {titulo_video}")
-            elif opcao in [2,3]:
-                print("Recurso desabilitado no momento.")
-            elif opcao == 4:
+                if opcao == 2: #Se opção = Baixar Áudio
+                    baixar_audio(url)
+                    
+            elif opcao == 3: #Se opção = baixar playlist
+                print("Recurso desabilitado no momento.") #Sem função de baixar playlist no momento.
+            elif opcao == 4: #Se opção = sair
                 print('\nAté logo!')
                 break
-            else:
+            else: #Se não escolher nenhuma opção, alertar opção inválida e repetir o loop do menu
                 print("\nOpção inválida! Tente novamente.")
                 
         except ValueError:
